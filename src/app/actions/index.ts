@@ -4,6 +4,7 @@
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
 import { signOut } from "@/auth"; 
+import { cookies } from "next/headers";
 
 // Define the response type for type safety
 type EmailResponse = {
@@ -137,6 +138,19 @@ export async function getStats() {
 // 5. Logout Action
 // ---------------------------------------------------------
 export async function logout() {
+  const cookieStore = await cookies(); 
+
+  // 1. Force delete the Production Secure Cookie
+  cookieStore.delete("__Secure-next-auth.session-token");
+  
+  // 2. Force delete the Development Cookie (just in case)
+  cookieStore.delete("next-auth.session-token");
+
+  // 3. Delete CSRF token (Production usually has the __Host- prefix)
+  cookieStore.delete("__Host-next-auth.csrf-token");
+  cookieStore.delete("next-auth.csrf-token");
+
+  // 4. Perform standard signout
   await signOut({ redirectTo: "/login" });
 }
 
