@@ -1,0 +1,26 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// Model to track emails we have used
+model UsedEmail {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  email     String   @unique
+  parentEmail String?
+  status    String   // "SUCCESS", "FAILED", "USED_BY_OTHERS"
+  createdAt DateTime @default(now())
+}
+
+// Model for your admin login
+model User {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  username String @unique
+  password String 
+}
