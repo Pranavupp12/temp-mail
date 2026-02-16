@@ -50,7 +50,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Input 
                 type="text" 
-                placeholder="Username (admin)" 
+                placeholder="admin" 
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
@@ -59,7 +59,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Input 
                 type="password" 
-                placeholder="Password (admin123)" 
+                placeholder="Password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
