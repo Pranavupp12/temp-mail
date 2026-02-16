@@ -165,3 +165,29 @@ export async function getHistory(page: number = 1, limit: number = 15) {
     return { history: [], total: 0, totalPages: 0 };
   }
 }
+
+// 7. Get System Stats (Live API Check)
+export async function getSystemStats() {
+  const url = `https://${process.env.RAPID_API_HOST}/stats`;
+  
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        "X-RapidAPI-Key": process.env.RAPID_API_KEY,
+        "X-RapidAPI-Host": process.env.RAPID_API_HOST,
+      },
+      timeout: 5000, // Fail fast if offline
+    });
+
+    return { 
+      isOnline: true, 
+      stats: response.data // { total_dot_mails, total_plus_mails, total_mails }
+    };
+  } catch (error) {
+    console.error("API Status Check Failed:", error);
+    return { 
+      isOnline: false, 
+      stats: null 
+    };
+  }
+}

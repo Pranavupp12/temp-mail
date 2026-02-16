@@ -1,16 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateEmail, checkInbox, markEmailStatus, getStats, logout, getHistory } from "@/app/actions";
+import { generateEmail, checkInbox, markEmailStatus, getStats, logout, getHistory, getSystemStats } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RefreshCw, Copy, CheckCircle, XCircle, AlertTriangle, Mail, LogOut, History, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Signal, Loader2, RefreshCw, Copy, CheckCircle, XCircle, AlertTriangle, Mail, LogOut, History, Eye, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { toast } from "sonner";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Import components
+// Import components (keeping your specific paths)
 import { EmailModal } from "@/components/dashboard/email-modal"; 
 import { HistoryInboxModal } from "@/components/dashboard/history-inbox-modal";
 import { HistoryTableSkeleton } from "@/components/skeletons/history-table-skeleton";
@@ -32,6 +38,12 @@ type HistoryItem = {
   createdAt: Date;
 };
 
+type ApiSystemStats = {
+  total_dot_mails: number;
+  total_plus_mails: number;
+  total_mails: number;
+} | null;
+
 export default function Dashboard() {
   // --- STATE ---
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
@@ -41,13 +53,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [inboxLoading, setInboxLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false); // Logout loader
   const [markingStatus, setMarkingStatus] = useState<string | null>(null);
 
   const [inbox, setInbox] = useState<InboxItem[]>([]);
   const [stats, setStats] = useState({ total: 0, success: 0 });
-  
-  // Pagination State
   const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  // NEW: API Status State
+  const [apiOnline, setApiOnline] = useState<boolean | null>(null); // null = checking
+  const [systemStats, setSystemStats] = useState<ApiSystemStats>(null);
+
+  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -63,7 +80,8 @@ export default function Dashboard() {
   // Load initial data
   useEffect(() => { 
     updateStats(); 
-    refreshHistory(1); // Load page 1 initially
+    refreshHistory(1);
+    checkApiHealth();
   }, []);
 
   const updateStats = async () => {
@@ -71,20 +89,24 @@ export default function Dashboard() {
     if (s) setStats(s);
   };
 
-  // UPDATED: Accepts page number
+  // NEW: Check API Health & Stats
+  const checkApiHealth = async () => {
+    const result = await getSystemStats();
+    setApiOnline(result.isOnline);
+    if (result.stats) {
+      setSystemStats(result.stats);
+    }
+  };
+
   const refreshHistory = async (page: number = 1) => {
     setHistoryLoading(true);
-    // Call server action with page number
-    const data = await getHistory(page, 15); // 15 items per page
-    
+    const data = await getHistory(page, 15);
     setHistory(data.history);
     setTotalPages(data.totalPages);
     setCurrentPage(page);
-    
     setHistoryLoading(false);
   };
 
-  // Handler for Page Change
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       refreshHistory(newPage);
@@ -103,12 +125,13 @@ export default function Dashboard() {
     if (result) {
       setCurrentEmail(result.email);
       if (result.isDuplicate) {
+        // warning string format: Used before as "STATUS"
         setDuplicateWarning(`Used before as "${result.previousStatus}"`);
         toast.warning("Duplicate Email", { description: "You have used this alias before." });
       } else {
         toast.success("Email Generated", { description: "Ready to use." });
       }
-      refreshHistory(1); // Refresh page 1 to see new email
+      refreshHistory(1);
       updateStats();
     } else {
       toast.error("Generation Failed", { description: "Check API quota or connection." });
@@ -119,6 +142,7 @@ export default function Dashboard() {
   const handleCheckInbox = async () => {
     if (!currentEmail) return;
     setInboxLoading(true);
+    
     const mails = await checkInbox(currentEmail);
     
     if (mails && mails.length > 0) {
@@ -139,7 +163,7 @@ export default function Dashboard() {
     
     if (success) {
       updateStats();
-      refreshHistory(currentPage); // Refresh current page to update status
+      refreshHistory(currentPage); 
       toast.success("Status Saved", { description: `Marked as ${status.toLowerCase().replace(/_/g, " ")}.` });
     } else {
       toast.error("Save Failed", { description: "Could not update database." });
@@ -169,6 +193,45 @@ export default function Dashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await logout();
+  };
+
+  // --- HELPER: Status Explanations ---
+  const getStatusExplanation = (status: string) => {
+    switch (status) {
+      case "SUCCESS":
+        return {
+          label: "Worked",
+          color: "bg-green-50 border-green-200 text-green-900",
+          icon: <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />,
+          desc: "You marked this as working perfectly. It receives emails correctly."
+        };
+      case "FAILED":
+        return {
+          label: "Blocked",
+          color: "bg-red-50 border-red-200 text-red-900",
+          icon: <XCircle className="h-5 w-5 text-red-600 mt-0.5" />,
+          desc: "You marked this as blocked. It likely does not receive emails from the target site."
+        };
+      case "USED_BY_OTHERS":
+        return {
+          label: "Taken",
+          color: "bg-orange-50 border-orange-200 text-orange-900",
+          icon: <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />,
+          desc: "You marked this as taken. It is already registered by someone else."
+        };
+      default:
+        return {
+          label: status,
+          color: "bg-slate-50 border-slate-200 text-slate-900",
+          icon: <Info className="h-5 w-5 text-slate-600 mt-0.5" />,
+          desc: "This email was used previously."
+        };
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "SUCCESS": return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Success</Badge>;
@@ -182,6 +245,10 @@ export default function Dashboard() {
     if (!text) return "No content.";
     return text.replace(/<[^>]*>?/gm, " ").substring(0, 150) + "...";
   };
+
+  // Extract previous status from duplicate warning string
+  const previousStatus = duplicateWarning ? duplicateWarning.split('"')[1] : null;
+  const statusInfo = previousStatus ? getStatusExplanation(previousStatus) : null;
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
@@ -197,11 +264,17 @@ export default function Dashboard() {
               TempMail <span className="text-slate-400 font-normal">Dashboard</span>
             </h1>
           </div>
-          <form action={logout}>
-            <Button variant="ghost" size="sm" type="submit" className="text-slate-500 hover:text-red-600">
-              <LogOut className="mr-2 h-4 w-4" /> Logout
-            </Button>
-          </form>
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleLogout} 
+            disabled={isLoggingOut}
+            className="text-slate-500 hover:text-red-600"
+          >
+            {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+            {isLoggingOut ? "Signing out..." : "Logout"}
+          </Button>
         </div>
 
         {/* Stats */}
@@ -217,8 +290,45 @@ export default function Dashboard() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-500">API Status</CardTitle></CardHeader>
-            <CardContent><Badge className="bg-emerald-100 text-emerald-800 px-3 py-1">Online</Badge></CardContent>
+            <CardHeader className="pb-2 flex flex-row items-center justify-between">
+              <CardTitle className="text-sm font-medium text-slate-500">System Health</CardTitle>
+              {apiOnline === true ? (
+                 <Signal className="h-4 w-4 text-emerald-500 animate-pulse" />
+              ) : apiOnline === false ? (
+                 <AlertTriangle className="h-4 w-4 text-red-500" />
+              ) : (
+                 <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className={`text-2xl font-bold ${apiOnline ? "text-slate-800" : "text-slate-400"}`}>
+                    {systemStats ? (systemStats.total_mails / 1000).toFixed(0) + "k+" : "..."}
+                  </span>
+                  {apiOnline === true && <Badge className="bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] h-5">Online</Badge>}
+                  {apiOnline === false && <Badge variant="destructive" className="px-2 py-0.5 text-[10px] h-5">Offline</Badge>}
+                </div>
+                
+                {/* Stats Breakdown Tooltip */}
+                {systemStats && (
+                   <TooltipProvider>
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <p className="text-xs text-slate-500 cursor-help underline decoration-dotted underline-offset-2">
+                           Available Aliases
+                         </p>
+                       </TooltipTrigger>
+                       <TooltipContent className="bg-slate-800 text-white text-xs p-3 space-y-1">
+                         <p className="font-bold border-b border-slate-600 pb-1 mb-1">System Capacity:</p>
+                         <div className="flex justify-between gap-4"><span>Dot Aliases:</span> <span className="font-mono">{systemStats.total_dot_mails.toLocaleString()}</span></div>
+                         <div className="flex justify-between gap-4"><span>Plus Aliases:</span> <span className="font-mono">{systemStats.total_plus_mails.toLocaleString()}</span></div>
+                       </TooltipContent>
+                     </Tooltip>
+                   </TooltipProvider>
+                )}
+              </div>
+            </CardContent>
           </Card>
         </div>
 
@@ -240,16 +350,18 @@ export default function Dashboard() {
                 </div>
 
                 {currentEmail ? (
-                  <div className="bg-slate-50 p-5 rounded-xl border border-blue-100 shadow-sm animate-in fade-in slide-in-from-top-2">
+                  <div className={`p-5 rounded-xl border shadow-sm animate-in fade-in slide-in-from-top-2 ${duplicateWarning ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-blue-100"}`}>
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 px-2 py-1 rounded">Active Inbox</span>
-                      {duplicateWarning && <Badge variant="destructive" className="flex gap-1 items-center"><AlertTriangle size={12} /> Used Before</Badge>}
+                      <span className="text-xs font-bold text-blue-600 uppercase tracking-wider bg-white/50 px-2 py-1 rounded">Active Inbox</span>
+                      {duplicateWarning && <Badge variant="destructive" className="flex gap-1 items-center"><AlertTriangle size={12} /> Duplicate Detected</Badge>}
                     </div>
                     <div className="flex gap-2 items-center">
                       <code className="flex-1 bg-white p-4 rounded-lg border border-slate-200 text-lg font-mono font-bold text-slate-800 break-all shadow-sm">{currentEmail}</code>
                       <Button size="icon" className="h-14 w-14 shrink-0" onClick={handleCopy}><Copy size={20} /></Button>
                     </div>
-                    <p className="text-xs text-slate-500 mt-3 flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Ready to receive emails.</p>
+                    {!duplicateWarning && (
+                      <p className="text-xs text-slate-500 mt-3 flex items-center gap-1"><CheckCircle size={12} className="text-green-500" /> Ready to receive emails.</p>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-slate-50 h-32 rounded-xl border border-dashed border-slate-300 flex items-center justify-center text-slate-400">Select a button above to start</div>
@@ -257,18 +369,38 @@ export default function Dashboard() {
 
                 {currentEmail && (
                   <div className="space-y-3 pt-6 border-t border-slate-100">
-                    <p className="text-sm font-semibold text-slate-700">Did this email work?</p>
-                    <div className="grid grid-cols-3 gap-3">
-                      <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMark("SUCCESS")} disabled={!!markingStatus}>
-                        {markingStatus === "SUCCESS" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="mr-2 h-4 w-4" /> Worked</>}
-                      </Button>
-                      <Button variant="destructive" onClick={() => handleMark("FAILED")} disabled={!!markingStatus}>
-                        {markingStatus === "FAILED" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><XCircle className="mr-2 h-4 w-4" /> Blocked</>}
-                      </Button>
-                      <Button variant="secondary" onClick={() => handleMark("USED_BY_OTHERS")} className="bg-slate-200 hover:bg-slate-300" disabled={!!markingStatus}>
-                        {markingStatus === "USED_BY_OTHERS" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Taken"}
-                      </Button>
-                    </div>
+                    
+                    {/* --- CONDITIONAL UI: DUPLICATE VS FRESH --- */}
+                    {duplicateWarning && statusInfo ? (
+                      <div className={`rounded-lg p-4 border ${statusInfo.color}`}>
+                        <div className="flex items-start gap-3">
+                          <div className="shrink-0">{statusInfo.icon}</div>
+                          <div>
+                            <h4 className="font-bold text-sm mb-1">Used before and marked as "{statusInfo.label}"</h4>
+                            <p className="text-xs opacity-90 leading-relaxed">{statusInfo.desc}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-slate-700">Did this email work?</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          <Button className="bg-green-600 hover:bg-green-700 text-white" onClick={() => handleMark("SUCCESS")} disabled={!!markingStatus}>
+                            {markingStatus === "SUCCESS" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><CheckCircle className="mr-2 h-4 w-4" /> Worked</>}
+                          </Button>
+                          <Button variant="destructive" onClick={() => handleMark("FAILED")} disabled={!!markingStatus}>
+                            {markingStatus === "FAILED" ? <Loader2 className="h-4 w-4 animate-spin" /> : <><XCircle className="mr-2 h-4 w-4" /> Blocked</>}
+                          </Button>
+                          <Button variant="secondary" onClick={() => handleMark("USED_BY_OTHERS")} className="bg-slate-200 hover:bg-slate-300" disabled={!!markingStatus}>
+                            {markingStatus === "USED_BY_OTHERS" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Taken"}
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 text-center mt-2">
+                           * worked: receiving emails • blocked: not receiving • taken: registered by others
+                        </p>
+                      </>
+                    )}
+
                   </div>
                 )}
               </CardContent>
@@ -336,12 +468,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* --- HISTORY TABLE WITH PAGINATION --- */}
+        {/* History Table with Pagination & Skeletons */}
         <Card className="mt-8 shadow-md">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-slate-500" /> History Log</CardTitle>
             <div className="flex items-center gap-2">
-               {/* Pagination Controls */}
                <div className="flex items-center gap-1 mr-2 text-sm text-slate-500">
                   <span className="font-medium">{currentPage}</span> / {totalPages}
                </div>
