@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { generateEmail, checkInbox, markEmailStatus, getStats, logout, getHistory, getSystemStats } from "@/app/actions";
+import { generateEmail, checkInbox, markEmailStatus, getStats, getHistory, getSystemStats } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,7 @@ import {
 import { EmailModal } from "@/components/dashboard/email-modal"; 
 import { HistoryInboxModal } from "@/components/dashboard/history-inbox-modal";
 import { HistoryTableSkeleton } from "@/components/skeletons/history-table-skeleton";
+import { signOut } from "next-auth/react";
 
 // Types
 export type InboxItem = {
@@ -67,6 +68,7 @@ export default function Dashboard() {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
 
   // Modal State
   const [selectedMail, setSelectedMail] = useState<InboxItem | null>(null);
@@ -195,7 +197,12 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    await logout();
+    
+    // Client-side sign out guarantees the browser clears the cookies
+    await signOut({ 
+      callbackUrl: "/login", // Where to go after logout
+      redirect: true 
+    });
   };
 
   // --- HELPER: Status Explanations ---

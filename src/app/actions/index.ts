@@ -137,7 +137,7 @@ export async function getStats() {
 // ---------------------------------------------------------
 // 5. Logout Action
 // ---------------------------------------------------------
-export async function logout() {
+/*{export async function logout() {
   const cookieStore = await cookies(); 
 
   // 1. Force delete the Production Secure Cookie
@@ -152,7 +152,7 @@ export async function logout() {
 
   // 4. Perform standard signout
   await signOut({ redirectTo: "/login" });
-}
+}}*/
 
 // 6. Get History (Updated for Pagination)
 export async function getHistory(page: number = 1, limit: number = 15) {
