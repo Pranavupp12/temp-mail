@@ -225,7 +225,7 @@ export default function Dashboard() {
       case "USED_BY_OTHERS":
         return {
           label: "Taken",
-          color: "bg-orange-50 border-orange-200 text-orange-900",
+          color: "bg-orange-100 border-orange-200 text-orange-900",
           icon: <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />,
           desc: "You marked this as taken. It is already registered by someone else."
         };
@@ -357,7 +357,7 @@ export default function Dashboard() {
                 </div>
 
                 {currentEmail ? (
-                  <div className={`p-5 rounded-xl border shadow-sm animate-in fade-in slide-in-from-top-2 ${duplicateWarning ? "bg-orange-50 border-orange-200" : "bg-slate-50 border-blue-100"}`}>
+                  <div className={`p-5 rounded-xl border shadow-sm animate-in fade-in slide-in-from-top-2 ${duplicateWarning ? "bg-gray-50 border-gray-200" : "bg-slate-50 border-blue-100"}`}>
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-xs font-bold text-blue-600 uppercase tracking-wider bg-white/50 px-2 py-1 rounded">Active Inbox</span>
                       {duplicateWarning && <Badge variant="destructive" className="flex gap-1 items-center"><AlertTriangle size={12} /> Duplicate Detected</Badge>}
