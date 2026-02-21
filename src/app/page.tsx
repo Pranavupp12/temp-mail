@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/tooltip";
 
 // Import components (keeping your specific paths)
-import { EmailModal } from "@/components/dashboard/email-modal"; 
+import { EmailModal } from "@/components/dashboard/email-modal";
 import { HistoryInboxModal } from "@/components/dashboard/history-inbox-modal";
 import { HistoryTableSkeleton } from "@/components/skeletons/history-table-skeleton";
 import { signOut } from "next-auth/react";
@@ -49,7 +49,7 @@ export default function Dashboard() {
   // --- STATE ---
   const [currentEmail, setCurrentEmail] = useState<string | null>(null);
   const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
-  
+
   // Loading States
   const [loading, setLoading] = useState(false);
   const [inboxLoading, setInboxLoading] = useState(false);
@@ -80,8 +80,8 @@ export default function Dashboard() {
   const [loadingHistoryId, setLoadingHistoryId] = useState<string | null>(null);
 
   // Load initial data
-  useEffect(() => { 
-    updateStats(); 
+  useEffect(() => {
+    updateStats();
     refreshHistory(1);
     checkApiHealth();
   }, []);
@@ -118,12 +118,12 @@ export default function Dashboard() {
   // --- HANDLERS ---
   const handleGenerate = async (type: "dot" | "plus") => {
     setLoading(true);
-    setInbox([]); 
+    setInbox([]);
     setDuplicateWarning(null);
     setCurrentEmail(null);
-    
+
     const result = await generateEmail(type);
-    
+
     if (result) {
       setCurrentEmail(result.email);
       if (result.isDuplicate) {
@@ -144,9 +144,9 @@ export default function Dashboard() {
   const handleCheckInbox = async () => {
     if (!currentEmail) return;
     setInboxLoading(true);
-    
+
     const mails = await checkInbox(currentEmail);
-    
+
     if (mails && mails.length > 0) {
       setInbox(mails);
       toast.success("Inbox Updated", { description: `Found ${mails.length} new emails.` });
@@ -162,10 +162,10 @@ export default function Dashboard() {
     setMarkingStatus(status);
 
     const success = await markEmailStatus(currentEmail, status);
-    
+
     if (success) {
       updateStats();
-      refreshHistory(currentPage); 
+      refreshHistory(currentPage);
       toast.success("Status Saved", { description: `Marked as ${status.toLowerCase().replace(/_/g, " ")}.` });
     } else {
       toast.error("Save Failed", { description: "Could not update database." });
@@ -187,7 +187,7 @@ export default function Dashboard() {
     setHistoryInboxMessages(mails || []);
     setHistoryInboxOpen(true);
     setLoadingHistoryId(null);
-    
+
     if (mails && mails.length > 0) {
       toast.success("History Retrieved", { description: `Found ${mails.length} emails in archive.` });
     } else {
@@ -197,11 +197,11 @@ export default function Dashboard() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    
+
     // Client-side sign out guarantees the browser clears the cookies
-    await signOut({ 
+    await signOut({
       callbackUrl: "/login", // Where to go after logout
-      redirect: true 
+      redirect: true
     });
   };
 
@@ -260,7 +260,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border">
           <div className="flex items-center gap-2">
@@ -271,11 +271,11 @@ export default function Dashboard() {
               TempMail <span className="text-slate-400 font-normal">Dashboard</span>
             </h1>
           </div>
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleLogout} 
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
             disabled={isLoggingOut}
             className="text-slate-500 hover:text-red-600"
           >
@@ -300,11 +300,11 @@ export default function Dashboard() {
             <CardHeader className="pb-2 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium text-slate-500">System Health</CardTitle>
               {apiOnline === true ? (
-                 <Signal className="h-4 w-4 text-emerald-500 animate-pulse" />
+                <Signal className="h-4 w-4 text-emerald-500 animate-pulse" />
               ) : apiOnline === false ? (
-                 <AlertTriangle className="h-4 w-4 text-red-500" />
+                <AlertTriangle className="h-4 w-4 text-red-500" />
               ) : (
-                 <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
+                <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
               )}
             </CardHeader>
             <CardContent>
@@ -316,23 +316,23 @@ export default function Dashboard() {
                   {apiOnline === true && <Badge className="bg-emerald-100 text-emerald-800 px-2 py-0.5 text-[10px] h-5">Online</Badge>}
                   {apiOnline === false && <Badge variant="destructive" className="px-2 py-0.5 text-[10px] h-5">Offline</Badge>}
                 </div>
-                
+
                 {/* Stats Breakdown Tooltip */}
                 {systemStats && (
-                   <TooltipProvider>
-                     <Tooltip>
-                       <TooltipTrigger asChild>
-                         <p className="text-xs text-slate-500 cursor-help underline decoration-dotted underline-offset-2">
-                           Available Aliases
-                         </p>
-                       </TooltipTrigger>
-                       <TooltipContent className="bg-slate-800 text-white text-xs p-3 space-y-1">
-                         <p className="font-bold border-b border-slate-600 pb-1 mb-1">System Capacity:</p>
-                         <div className="flex justify-between gap-4"><span>Dot Aliases:</span> <span className="font-mono">{systemStats.total_dot_mails.toLocaleString()}</span></div>
-                         <div className="flex justify-between gap-4"><span>Plus Aliases:</span> <span className="font-mono">{systemStats.total_plus_mails.toLocaleString()}</span></div>
-                       </TooltipContent>
-                     </Tooltip>
-                   </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-xs text-slate-500 cursor-help underline decoration-dotted underline-offset-2">
+                          Available Aliases
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent className="bg-slate-800 text-white text-xs p-3 space-y-1">
+                        <p className="font-bold border-b border-slate-600 pb-1 mb-1">System Capacity:</p>
+                        <div className="flex justify-between gap-4"><span>Dot Aliases:</span> <span className="font-mono">{systemStats.total_dot_mails.toLocaleString()}</span></div>
+                        <div className="flex justify-between gap-4"><span>Plus Aliases:</span> <span className="font-mono">{systemStats.total_plus_mails.toLocaleString()}</span></div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
             </CardContent>
@@ -341,7 +341,7 @@ export default function Dashboard() {
 
         {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
+
           {/* Generator */}
           <div className="space-y-6">
             <Card className="border-t-4 border-t-blue-600 shadow-md h-full">
@@ -351,8 +351,13 @@ export default function Dashboard() {
                   <Button onClick={() => handleGenerate("dot")} disabled={loading} className="h-12 text-lg font-medium">
                     {loading ? <Loader2 className="animate-spin mr-2" /> : "New Dot Alias"}
                   </Button>
-                  <Button onClick={() => handleGenerate("plus")} variant="outline" disabled={loading} className="h-12 text-lg font-medium">
-                    New Plus Alias
+                  <Button
+                    onClick={() => handleGenerate("plus")}
+                    variant="outline"
+                    disabled={true} // <-- Force it to be disabled
+                    className="h-12 text-lg font-medium opacity-50 cursor-not-allowed" // Make it look disabled
+                  >
+                    New Plus Alias (Unavailable)
                   </Button>
                 </div>
 
@@ -376,7 +381,7 @@ export default function Dashboard() {
 
                 {currentEmail && (
                   <div className="space-y-3 pt-6 border-t border-slate-100">
-                    
+
                     {/* --- CONDITIONAL UI: DUPLICATE VS FRESH --- */}
                     {duplicateWarning && statusInfo ? (
                       <div className={`rounded-lg p-4 border ${statusInfo.color}`}>
@@ -403,7 +408,7 @@ export default function Dashboard() {
                           </Button>
                         </div>
                         <p className="text-[10px] text-slate-400 text-center mt-2">
-                           * worked: receiving emails • blocked: not receiving • taken: registered by others
+                          * worked: receiving emails • blocked: not receiving • taken: registered by others
                         </p>
                       </>
                     )}
@@ -434,8 +439,8 @@ export default function Dashboard() {
                     {[1, 2, 3].map((i) => (
                       <div key={i} className="bg-white p-4 rounded-lg border border-slate-200">
                         <div className="flex justify-between mb-2">
-                           <Skeleton className="h-4 w-24" />
-                           <Skeleton className="h-3 w-12" />
+                          <Skeleton className="h-4 w-24" />
+                          <Skeleton className="h-3 w-12" />
                         </div>
                         <Skeleton className="h-4 w-3/4 mb-2" />
                         <Skeleton className="h-10 w-full" />
@@ -450,9 +455,9 @@ export default function Dashboard() {
                 ) : (
                   <div className="space-y-3">
                     {inbox.map((mail, idx) => (
-                      <div 
-                        key={idx} 
-                        onClick={() => setSelectedMail(mail)} 
+                      <div
+                        key={idx}
+                        onClick={() => setSelectedMail(mail)}
                         className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 hover:border-purple-300 transition-all cursor-pointer group hover:shadow-md"
                       >
                         <div className="flex justify-between items-start mb-2">
@@ -461,7 +466,7 @@ export default function Dashboard() {
                         </div>
                         <h4 className="font-semibold text-purple-700 text-sm mb-2 group-hover:underline truncate">{mail.subject || mail.title || "(No Subject)"}</h4>
                         <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded border border-slate-100 font-mono break-all whitespace-pre-wrap max-h-24 overflow-hidden relative">
-                           {cleanHtmlPreview(mail.body || mail.snippet || "")}
+                          {cleanHtmlPreview(mail.body || mail.snippet || "")}
                         </div>
                         <div className="text-[10px] text-blue-500 mt-2 font-medium opacity-0 group-hover:opacity-100 transition-opacity text-right">
                           Click to read full email →
@@ -480,29 +485,29 @@ export default function Dashboard() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2"><History className="h-5 w-5 text-slate-500" /> History Log</CardTitle>
             <div className="flex items-center gap-2">
-               <div className="flex items-center gap-1 mr-2 text-sm text-slate-500">
-                  <span className="font-medium">{currentPage}</span> / {totalPages}
-               </div>
-               <Button 
-                 variant="outline" 
-                 size="icon" 
-                 className="h-8 w-8" 
-                 onClick={() => handlePageChange(currentPage - 1)} 
-                 disabled={currentPage === 1 || historyLoading}
-               >
-                 <ChevronLeft className="h-4 w-4" />
-               </Button>
-               <Button 
-                 variant="outline" 
-                 size="icon" 
-                 className="h-8 w-8" 
-                 onClick={() => handlePageChange(currentPage + 1)} 
-                 disabled={currentPage >= totalPages || historyLoading}
-               >
-                 <ChevronRight className="h-4 w-4" />
-               </Button>
-               <div className="h-4 w-px bg-slate-200 mx-2" />
-               <Button variant="ghost" size="sm" onClick={() => refreshHistory(currentPage)}><RefreshCw className="h-4 w-4 mr-2" /> Refresh</Button>
+              <div className="flex items-center gap-1 mr-2 text-sm text-slate-500">
+                <span className="font-medium">{currentPage}</span> / {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1 || historyLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages || historyLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <div className="h-4 w-px bg-slate-200 mx-2" />
+              <Button variant="ghost" size="sm" onClick={() => refreshHistory(currentPage)}><RefreshCw className="h-4 w-4 mr-2" /> Refresh</Button>
             </div>
           </CardHeader>
           <CardContent>
@@ -528,9 +533,9 @@ export default function Dashboard() {
                       <TableCell className="text-slate-500">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         {item.status === "SUCCESS" && (
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
+                          <Button
+                            variant="outline"
+                            size="sm"
                             className="h-8 text-blue-600 border-blue-200 hover:bg-blue-50"
                             onClick={() => handleViewHistoryInbox(item)}
                             disabled={loadingHistoryId === item.id}

@@ -55,6 +55,8 @@ export async function generateEmail(type: "dot" | "plus") {
   const endpoint = type === "dot" ? "/get-email-dot" : "/get-email-plus";
   const url = `https://${HOST}${endpoint}`;
 
+  console.log("👉 TRYING TO HIT URL:", url, "WITH HOST:", HOST);
+
   try {
     // A. Fetch from API with Rotation
     const response = await fetchWithRotation(async (key) => {
